@@ -1,33 +1,122 @@
 import React, { Component } from 'react';
 import { Button, Form, FormGroup, Label, Input } from 'reactstrap';
+import  FlightCards from './FlightCards';
 
 export default class FindFlight extends Component {
   constructor(props){
     super(props);
+
+    this.getFormattedDate = (date) => {
+      const year = date.getFullYear();
+
+      let month = (1 + date.getMonth()).toString();
+      month = month.length > 1 ? month : '0' + month;
+
+      let day = (1 + date.getMonth()).toString();
+      day = day.length > 1 ? day : '0' + day;
+
+      return year + '-' + month + '-' + day;
+    }
+
+    this.getFlightInfo = (event) => {
+      event.preventDefault();
+      this.findAirport(this.state.fromCity, 'fromAirport', this);
+      this.findAirport(this.state.toCity, 'toAirport', this);
+    }
+
+    this.findAirport = (city, key) => {
+      fetch("https://skyscanner-skyscanner-flight-search-v1.p.rapidapi.com/apiservices/autosuggest/v1.0/US/USD/en-US/?query="+city, {
+        method: "GET",
+        headers: {
+          "X-Mashape-Key": process.env.REACT_APP_MASHAPE_API_KEY,
+          "X-Mashape-Host": "skyscanner-skyscanner-flight-search-v1.p.rapidapi.com"
+        }
+      }).then(data => {
+        return data.json();
+      }, error => {
+        throw error;
+      }).then(jsonData => {
+        this.setState({ [key]: jsonData.Places[0].PlaceId });
+        console.log(this.state);
+        if (this.state.toAirport.length > 0 && this.state.fromAirport.length > 0) {
+          this.findFlight();
+        }        
+      })
+    }
+
+    this.findFlight = () => {
+      let dateFrom;
+      let dateTo;
+      if (this.state.fromDate === '') dateFrom = 'anytime';
+      else {
+        let df = new Date(this.state.fromDate);
+        dateFrom = this.getFormattedDate(df);
+      }
+      if (this.state.toDate === '') dateTo = 'anytime';
+      else {
+        let dt = new Date(this.state.toDate);
+        dateTo = this.getFormattedDate(dt);
+      }
+      console.log('Date From: ', dateFrom);
+      console.log('Date To: ', dateTo);
+      
+      fetch("https://skyscanner-skyscanner-flight-search-v1.p.rapidapi.com/apiservices/browsedates/v1.0/US/USD/en-US/" + this.state.fromAirport + "/" + this.state.toAirport + "/" + dateFrom + "/" + dateTo, {
+        method: "GET",
+        headers: {
+          "X-Mashape-Key": process.env.REACT_APP_MASHAPE_API_KEY,
+          "X-Mashape-Host": "skyscanner-skyscanner-flight-search-v1.p.rapidapi.com"
+        }
+      }).then(data => {
+        return data.json();
+      }, error => {
+        throw error;
+      }).then(jsonData => {
+        console.log(jsonData);
+        if (jsonData.ValidationErrors != null) this.setState({ flights: [] });
+        else this.setState({ flights: jsonData.Quotes });      
+      })
+    }
+
+    this.handleOnChange = (event) => {
+      this.setState({[event.target.id]: event.target.value });
+    }
+  
+    this.state = {
+      fromCity: '',
+      toCity: '',
+      fromDate: '',
+      toDate: '',
+      fromAirport: '',
+      toAirport: '',
+      flights: [],
+    }
     
   }
   render() {
+    
     return (
       <div className="container">
-        <Form inline>
-          <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
-            <Label for="choosecity" className="mr-sm-2">Origin City</Label>
-            <Input type="text" name="v" id="chooseCity" placeholder="Enter Origin" />
+        <Form>
+          <FormGroup >
+            <Label for="fromCity">Origin City</Label>
+            <Input type="text" name="fromCity" id="fromCity" placeholder="Enter Origin" onChange={this.handleOnChange} />
           </FormGroup>
-          <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
-            <Label for="tocity" className="mr-sm-2">Destination City</Label>
-            <Input type="text" name="tocity" id="tocity" placeholder="Enter Destination" />
+          <FormGroup >
+            <Label for="toCity">Destination City</Label>
+            <Input type="text" name="toCity" id="toCity" placeholder="Enter Destination" onChange={this.handleOnChange} />
           </FormGroup>
-          <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
-            <Label for="depDate" className="mr-sm-2">Departing Date</Label>
-            <Input type="date" name="depDate" id="depDate" defaultValue={new Date()} />
+          <FormGroup >
+            <Label for="fromDate">Departing Date (Leave blank for Anytime)</Label>
+            <Input type="date" name="fromDate" id="fromDate" onChange={this.handleOnChange} />
           </FormGroup>
-          <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
-            <Label for="retDate" className="mr-sm-2">Return Date</Label>
-            <Input type="date" name="retDate" id="retDate" defaultValue={new Date()} />
+          <FormGroup >
+            <Label for="toDate">Return Date (Leave blank for Anytime)</Label>
+            <Input type="date" name="toDate" id="toDate" onChange={this.handleOnChange} />
           </FormGroup>
-          <Button>Check Availability</Button>
+          <Button onClick={this.getFlightInfo}>Check Availability</Button>
         </Form>
+        <br/>
+        { this.state.flights.length > 1 ? <FlightCards /> : null }
       </div>
 
     );
