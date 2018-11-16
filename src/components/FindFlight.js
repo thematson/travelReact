@@ -12,11 +12,14 @@ export default class FindFlight extends Component {
       let month = (1 + date.getMonth()).toString();
       month = month.length > 1 ? month : '0' + month;
 
-      let day = (1 + date.getMonth()).toString();
+      let day = (1 + date.getDate()).toString();
       day = day.length > 1 ? day : '0' + day;
 
       return year + '-' + month + '-' + day;
     }
+
+    const proxyurl = "https://cors-anywhere.herokuapp.com/";
+
 
     this.getFlightInfo = (event) => {
       event.preventDefault();
@@ -25,7 +28,7 @@ export default class FindFlight extends Component {
     }
 
     this.findAirport = (city, key) => {
-      fetch("https://skyscanner-skyscanner-flight-search-v1.p.rapidapi.com/apiservices/autosuggest/v1.0/US/USD/en-US/?query="+city, {
+      fetch(proxyurl + "https://skyscanner-skyscanner-flight-search-v1.p.rapidapi.com/apiservices/autosuggest/v1.0/US/USD/en-US/?query="+city, {
         method: "GET",
         headers: {
           "X-Mashape-Key": process.env.REACT_APP_MASHAPE_API_KEY,
@@ -47,10 +50,13 @@ export default class FindFlight extends Component {
     this.findFlight = () => {
       let dateFrom;
       let dateTo;
+      console.log(this.state.fromDate);
       if (this.state.fromDate === '') dateFrom = 'anytime';
       else {
         let df = new Date(this.state.fromDate);
+        console.log(df);
         dateFrom = this.getFormattedDate(df);
+        console.log(dateFrom);
       }
       if (this.state.toDate === '') dateTo = 'anytime';
       else {
@@ -59,8 +65,9 @@ export default class FindFlight extends Component {
       }
       console.log('Date From: ', dateFrom);
       console.log('Date To: ', dateTo);
+
       
-      fetch("https://skyscanner-skyscanner-flight-search-v1.p.rapidapi.com/apiservices/browsedates/v1.0/US/USD/en-US/" + this.state.fromAirport + "/" + this.state.toAirport + "/" + dateFrom + "/" + dateTo, {
+      fetch(proxyurl + "https://skyscanner-skyscanner-flight-search-v1.p.rapidapi.com/apiservices/browsedates/v1.0/US/USD/en-US/" + this.state.fromAirport + "/" + this.state.toAirport + "/" + dateFrom + "/" + dateTo, {
         method: "GET",
         headers: {
           "X-Mashape-Key": process.env.REACT_APP_MASHAPE_API_KEY,
@@ -116,7 +123,7 @@ export default class FindFlight extends Component {
           <Button onClick={this.getFlightInfo}>Check Availability</Button>
         </Form>
         <br/>
-        { this.state.flights.length > 1 ? <FlightCards /> : null }
+        { this.state.flights.length > 0 ? <FlightCards concState={this.state} /> : null }
       </div>
 
     );
